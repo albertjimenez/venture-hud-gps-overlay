@@ -1,6 +1,6 @@
-use std::error::Error;
 use exiftool::ExifTool;
 use serde_json::Value;
+use std::error::Error;
 use std::path::Path;
 
 /// Runs exiftool and returns raw JSON.

@@ -9,21 +9,31 @@ use crate::telemetry::vantrue_frames::{AccelerometerFrame, GpsFrame, TelemetryFr
 fn dms_to_decimal(dms: &str) -> Option<f64> {
     let dms = dms.trim();
     let parts: Vec<&str> = dms.split(" deg ").collect();
-    if parts.len() != 2 { return None; }
+    if parts.len() != 2 {
+        return None;
+    }
 
     let deg: f64 = parts[0].parse().ok()?;
     let rest = parts[1];
     let min_parts: Vec<&str> = rest.split('\'').collect();
-    if min_parts.len() != 2 { return None; }
+    if min_parts.len() != 2 {
+        return None;
+    }
 
     let min: f64 = min_parts[0].trim().parse().ok()?;
     let sec_dir = min_parts[1].trim();
     let sec_parts: Vec<&str> = sec_dir.split_whitespace().collect();
-    if sec_parts.len() != 2 { return None; }
+    if sec_parts.len() != 2 {
+        return None;
+    }
 
     let sec: f64 = sec_parts[0].trim_end_matches('"').parse().ok()?;
     let dir = sec_parts[1];
-    let sign = if dir.starts_with('S') || dir.starts_with('W') { -1.0 } else { 1.0 };
+    let sign = if dir.starts_with('S') || dir.starts_with('W') {
+        -1.0
+    } else {
+        1.0
+    };
 
     Some(sign * (deg + min / 60.0 + sec / 3600.0))
 }
@@ -42,45 +52,64 @@ fn dms_to_decimal(dms: &str) -> Option<f64> {
 pub fn parse_datetime_to_epoch(s: &str) -> Option<f64> {
     let s = s.trim();
     // Strip timezone: everything from '+' or trailing 'Z'
-    let s = if let Some(idx) = s.find('+') { &s[..idx] }
-    else if s.ends_with('Z')        { &s[..s.len() - 1] }
-    else                            { s };
+    let s = if let Some(idx) = s.find('+') {
+        &s[..idx]
+    } else if s.ends_with('Z') {
+        &s[..s.len() - 1]
+    } else {
+        s
+    };
     let s = s.trim();
 
     let parts: Vec<&str> = s.splitn(2, ' ').collect();
-    if parts.len() != 2 { return None; }
+    if parts.len() != 2 {
+        return None;
+    }
 
     let date_parts: Vec<u64> = parts[0].split(':').filter_map(|p| p.parse().ok()).collect();
     let time_parts: Vec<f64> = parts[1].split(':').filter_map(|p| p.parse().ok()).collect();
 
-    if date_parts.len() < 3 || time_parts.len() < 3 { return None; }
+    if date_parts.len() < 3 || time_parts.len() < 3 {
+        return None;
+    }
 
     let (year, month, day) = (date_parts[0], date_parts[1], date_parts[2]);
     let (hour, minute, second) = (time_parts[0] as u64, time_parts[1] as u64, time_parts[2]);
 
-    let days  = days_since_epoch(year, month, day)?;
-    let epoch = days as f64 * 86_400.0
-        + hour   as f64 * 3_600.0
-        + minute as f64 * 60.0
-        + second;
+    let days = days_since_epoch(year, month, day)?;
+    let epoch = days as f64 * 86_400.0 + hour as f64 * 3_600.0 + minute as f64 * 60.0 + second;
     Some(epoch)
 }
 
 fn days_since_epoch(year: u64, month: u64, day: u64) -> Option<i64> {
-    if year < 1970 || month < 1 || month > 12 || day < 1 { return None; }
+    if year < 1970 || month < 1 || month > 12 || day < 1 {
+        return None;
+    }
 
-    let y = year  as i64;
+    let y = year as i64;
     let m = month as i64;
-    let d = day   as i64;
+    let d = day as i64;
 
     let leap = (y % 4 == 0 && y % 100 != 0) || (y % 400 == 0);
     let month_days: [i64; 12] = [
-        31, if leap { 29 } else { 28 }, 31, 30, 31, 30,
-        31, 31, 30, 31, 30, 31,
+        31,
+        if leap { 29 } else { 28 },
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
     ];
 
     let mut days = (y - 1970) * 365 + leap_days_since_1970(y);
-    for mi in 0..(m - 1) { days += month_days[mi as usize]; }
+    for mi in 0..(m - 1) {
+        days += month_days[mi as usize];
+    }
     days += d - 1;
     Some(days)
 }
@@ -94,11 +123,18 @@ fn leap_days_since_1970(year: i64) -> i64 {
 
 /// Parse a Vantrue accelerometer string like `"-0.02 -0.776 -0.342"` → x, y, z.
 fn parse_accel(s: &str) -> Option<AccelerometerFrame> {
-    let vals: Vec<f32> = s.split_whitespace()
+    let vals: Vec<f32> = s
+        .split_whitespace()
         .filter_map(|v| v.parse().ok())
         .collect();
-    if vals.len() != 3 { return None; }
-    Some(AccelerometerFrame { x: vals[0], y: vals[1], z: vals[2] })
+    if vals.len() != 3 {
+        return None;
+    }
+    Some(AccelerometerFrame {
+        x: vals[0],
+        y: vals[1],
+        z: vals[2],
+    })
 }
 
 // ─── Speed conversion ─────────────────────────────────────────────────────────
@@ -118,7 +154,7 @@ fn to_kmh(speed: f64, speed_ref: &str) -> f64 {
         "K" => speed,
         "M" => speed * 1.609_34,
         "N" => speed * 1.852,
-        _   => speed,  // absent / unknown → already km/h
+        _ => speed, // absent / unknown → already km/h
     }
 }
 
@@ -137,7 +173,7 @@ fn to_kmh(speed: f64, speed_ref: &str) -> f64 {
 pub fn parse_telemetry(json: &Value) -> Vec<TelemetryFrame> {
     let obj = match json.as_object() {
         Some(o) => o,
-        None    => return vec![],
+        None => return vec![],
     };
 
     // ── Group all "Doc*:Field" entries by doc_id ────────────────────────────
@@ -154,56 +190,64 @@ pub fn parse_telemetry(json: &Value) -> Vec<TelemetryFrame> {
     }
 
     // ── Parse each Doc block ────────────────────────────────────────────────
-    let mut frames: Vec<TelemetryFrame> = docs.into_iter().map(|(doc_id, fields)| {
-        // Speed unit for this doc — fall back to top-level tag, then assume knots
-        let speed_ref = fields
-            .get("GPSSpeedRef")
-            .and_then(|v| v.as_str())
-            .or_else(|| obj.get("GPSSpeedRef").and_then(|v| v.as_str()))
-            .unwrap_or("K")  // absent → km/h passthrough (Vantrue native unit)
-            .to_string();
+    let mut frames: Vec<TelemetryFrame> = docs
+        .into_iter()
+        .map(|(doc_id, fields)| {
+            // Speed unit for this doc — fall back to top-level tag, then assume knots
+            let speed_ref = fields
+                .get("GPSSpeedRef")
+                .and_then(|v| v.as_str())
+                .or_else(|| obj.get("GPSSpeedRef").and_then(|v| v.as_str()))
+                .unwrap_or("K") // absent → km/h passthrough (Vantrue native unit)
+                .to_string();
 
-        let gps = if let (Some(lat_str), Some(lon_str), Some(ts)) = (
-            fields.get("GPSLatitude").and_then(|v| v.as_str()),
-            fields.get("GPSLongitude").and_then(|v| v.as_str()),
-            fields.get("GPSDateTime").and_then(|v| v.as_str()),
-        ) {
-            let lat     = dms_to_decimal(lat_str).unwrap_or(0.0);
-            let lon     = dms_to_decimal(lon_str).unwrap_or(0.0);
-            let epoch_s = parse_datetime_to_epoch(ts).unwrap_or(0.0);
-            let speed   = fields.get("GPSSpeed")
-                .and_then(|v| v.as_f64())
-                .map(|s| to_kmh(s, &speed_ref));
-            let heading = fields.get("GPSTrack").and_then(|v| v.as_f64());
+            let gps = if let (Some(lat_str), Some(lon_str), Some(ts)) = (
+                fields.get("GPSLatitude").and_then(|v| v.as_str()),
+                fields.get("GPSLongitude").and_then(|v| v.as_str()),
+                fields.get("GPSDateTime").and_then(|v| v.as_str()),
+            ) {
+                let lat = dms_to_decimal(lat_str).unwrap_or(0.0);
+                let lon = dms_to_decimal(lon_str).unwrap_or(0.0);
+                let epoch_s = parse_datetime_to_epoch(ts).unwrap_or(0.0);
+                let speed = fields
+                    .get("GPSSpeed")
+                    .and_then(|v| v.as_f64())
+                    .map(|s| to_kmh(s, &speed_ref));
+                let heading = fields.get("GPSTrack").and_then(|v| v.as_f64());
 
-            Some(GpsFrame {
-                timestamp: ts.to_string(),
-                epoch_s,
-                time_s: 0.0,  // filled in the post-pass below
-                latitude: lat,
-                longitude: lon,
-                speed,
-                heading,
-            })
-        } else {
-            None
-        };
+                Some(GpsFrame {
+                    timestamp: ts.to_string(),
+                    epoch_s,
+                    time_s: 0.0, // filled in the post-pass below
+                    latitude: lat,
+                    longitude: lon,
+                    speed,
+                    heading,
+                })
+            } else {
+                None
+            };
 
-        let accel = fields
-            .get("Accelerometer")
-            .and_then(|v| v.as_str())
-            .and_then(parse_accel);
+            let accel = fields
+                .get("Accelerometer")
+                .and_then(|v| v.as_str())
+                .and_then(parse_accel);
 
-        TelemetryFrame { doc_id, gps, accel }
-    }).collect();
+            TelemetryFrame { doc_id, gps, accel }
+        })
+        .collect();
 
     // ── Sort by Doc number ──────────────────────────────────────────────────
     frames.sort_by_key(|f| {
-        f.doc_id.trim_start_matches("Doc").parse::<u32>().unwrap_or(0)
+        f.doc_id
+            .trim_start_matches("Doc")
+            .parse::<u32>()
+            .unwrap_or(0)
     });
 
     // ── Post-pass: compute time_s relative to first GPS epoch ───────────────
-    let first_epoch = frames.iter()
+    let first_epoch = frames
+        .iter()
         .filter_map(|f| f.gps.as_ref())
         .find(|g| g.epoch_s > 0.0)
         .map(|g| g.epoch_s)
@@ -211,7 +255,11 @@ pub fn parse_telemetry(json: &Value) -> Vec<TelemetryFrame> {
 
     for frame in frames.iter_mut() {
         if let Some(gps) = frame.gps.as_mut() {
-            gps.time_s = if gps.epoch_s > 0.0 { gps.epoch_s - first_epoch } else { 0.0 };
+            gps.time_s = if gps.epoch_s > 0.0 {
+                gps.epoch_s - first_epoch
+            } else {
+                0.0
+            };
         }
     }
 
@@ -287,14 +335,22 @@ mod tests {
     fn consecutive_seconds_differ_by_one() {
         let a = parse_datetime_to_epoch("2026:03:07 17:14:45Z").unwrap();
         let b = parse_datetime_to_epoch("2026:03:07 17:14:46Z").unwrap();
-        assert!((b - a - 1.0).abs() < 1e-9, "should differ by 1.0s, diff={}", b - a);
+        assert!(
+            (b - a - 1.0).abs() < 1e-9,
+            "should differ by 1.0s, diff={}",
+            b - a
+        );
     }
 
     #[test]
     fn midnight_rollover_is_correct() {
         let a = parse_datetime_to_epoch("2026:03:07 23:59:59Z").unwrap();
         let b = parse_datetime_to_epoch("2026:03:08 00:00:00Z").unwrap();
-        assert!((b - a - 1.0).abs() < 1e-9, "midnight rollover diff={}", b - a);
+        assert!(
+            (b - a - 1.0).abs() < 1e-9,
+            "midnight rollover diff={}",
+            b - a
+        );
     }
 
     #[test]
@@ -347,14 +403,20 @@ mod tests {
     fn unknown_ref_passes_through_as_kmh() {
         // Unknown ref → treat as already km/h (passthrough), not knots
         let v = to_kmh(1.0, "X");
-        assert!((v - 1.0).abs() < 1e-9, "unknown ref should pass through, got {v}");
+        assert!(
+            (v - 1.0).abs() < 1e-9,
+            "unknown ref should pass through, got {v}"
+        );
     }
 
     #[test]
     fn empty_ref_passes_through_as_kmh() {
         // Absent/empty ref → treat as already km/h (Vantrue native unit)
         let v = to_kmh(1.0, "");
-        assert!((v - 1.0).abs() < 1e-9, "empty ref should pass through, got {v}");
+        assert!(
+            (v - 1.0).abs() < 1e-9,
+            "empty ref should pass through, got {v}"
+        );
     }
 
     // ── parse_accel ───────────────────────────────────────────────────────────
@@ -422,7 +484,8 @@ mod tests {
         });
         let frames = parse_telemetry(&json);
         assert_eq!(frames.len(), 3);
-        let t: Vec<f64> = frames.iter()
+        let t: Vec<f64> = frames
+            .iter()
             .map(|f| f.gps.as_ref().unwrap().time_s)
             .collect();
         assert!((t[0] - 0.0).abs() < 1e-9, "Doc1 time_s={}", t[0]);
@@ -441,8 +504,10 @@ mod tests {
         });
         let frames = parse_telemetry(&json);
         let speed = frames[0].gps.as_ref().unwrap().speed.unwrap();
-        assert!((speed - 72.0).abs() < 1e-6,
-                "absent ref: 72 should pass through as 72 km/h, got {speed}");
+        assert!(
+            (speed - 72.0).abs() < 1e-6,
+            "absent ref: 72 should pass through as 72 km/h, got {speed}"
+        );
     }
 
     #[test]
@@ -494,7 +559,9 @@ mod tests {
         });
         let frames = parse_telemetry(&json);
         let speed = frames[0].gps.as_ref().unwrap().speed.unwrap();
-        assert!((speed - 55.0).abs() < 1e-6,
-                "top-level K ref should give 55 km/h, got {speed}");
+        assert!(
+            (speed - 55.0).abs() < 1e-6,
+            "top-level K ref should give 55 km/h, got {speed}"
+        );
     }
 }

@@ -1,7 +1,7 @@
 use quick_error::ResultExt;
 use std::path::PathBuf;
 
-use anyhow::{Result};
+use anyhow::Result;
 use clap::{Parser, Subcommand, ValueEnum};
 
 mod hud;
@@ -19,9 +19,9 @@ use telemetry::parser::parse_telemetry;
 
 #[derive(Parser, Debug)]
 #[command(
-    name       = "dashcam-hud",
+    name = "dashcam-hud",
     version,
-    about      = "Generate a videogame-style HUD overlay from dashcam telemetry",
+    about = "Generate a videogame-style HUD overlay from dashcam telemetry",
     long_about = r#"
 dashcam-hud — render a transparent telemetry HUD and composite it over footage.
 
@@ -55,7 +55,7 @@ dashcam-hud — render a transparent telemetry HUD and composite it over footage
 
   Example — compass + GPS only:
     dashcam-hud compose clip.MP4 out.mp4 --preset none --compass --gps-tag
-"#,
+"#
 )]
 struct Cli {
     #[command(subcommand)]
@@ -99,9 +99,9 @@ impl HudPreset {
     fn elements(&self) -> HudElements {
         match self {
             HudPreset::Default => HudElements::default_view(),
-            HudPreset::Full    => HudElements::full(),
+            HudPreset::Full => HudElements::full(),
             HudPreset::Minimal => HudElements::minimal(),
-            HudPreset::None    => HudElements::none(),
+            HudPreset::None => HudElements::none(),
         }
     }
 }
@@ -155,16 +155,36 @@ impl HudFlags {
         let mut e = self.preset.elements();
         // Each pair: if the positive flag was explicitly set, force on;
         // if the negative flag was explicitly set, force off.
-        if self.speedometer    { e.speedometer = true;  }
-        if self.no_speedometer { e.speedometer = false; }
-        if self.gforce         { e.gforce      = true;  }
-        if self.no_gforce      { e.gforce      = false; }
-        if self.compass        { e.compass     = true;  }
-        if self.no_compass     { e.compass     = false; }
-        if self.gps_tag        { e.gps_tag     = true;  }
-        if self.no_gps_tag     { e.gps_tag     = false; }
-        if self.minimap        { e.minimap     = true;  }
-        if self.no_minimap     { e.minimap     = false; }
+        if self.speedometer {
+            e.speedometer = true;
+        }
+        if self.no_speedometer {
+            e.speedometer = false;
+        }
+        if self.gforce {
+            e.gforce = true;
+        }
+        if self.no_gforce {
+            e.gforce = false;
+        }
+        if self.compass {
+            e.compass = true;
+        }
+        if self.no_compass {
+            e.compass = false;
+        }
+        if self.gps_tag {
+            e.gps_tag = true;
+        }
+        if self.no_gps_tag {
+            e.gps_tag = false;
+        }
+        if self.minimap {
+            e.minimap = true;
+        }
+        if self.no_minimap {
+            e.minimap = false;
+        }
         e
     }
 }
@@ -254,8 +274,8 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
     match cli.command {
         Commands::Inspect { input, count } => cmd_inspect(&input, count),
-        Commands::Render(args)             => cmd_render(args),
-        Commands::Compose(args)            => cmd_compose(args),
+        Commands::Render(args) => cmd_render(args),
+        Commands::Compose(args) => cmd_compose(args),
     }
 }
 
@@ -263,7 +283,9 @@ fn main() -> Result<()> {
 
 fn cmd_inspect(input: &PathBuf, count: usize) -> Result<()> {
     println!("Extracting telemetry from {}…", input.display());
-    let json   = extract_metadata(input).context("exiftool extraction failed").expect("exiftool extraction failed");
+    let json = extract_metadata(input)
+        .context("exiftool extraction failed")
+        .expect("exiftool extraction failed");
     let frames = parse_telemetry(&json);
     println!("Total telemetry frames: {}\n", frames.len());
 
@@ -272,13 +294,17 @@ fn cmd_inspect(input: &PathBuf, count: usize) -> Result<()> {
         match &frame.gps {
             Some(g) => println!(
                 "  GPS  lat={:.6}  lon={:.6}  speed={:.1}km/h  hdg={:.1}°  ts={}",
-                g.latitude, g.longitude, g.speed.unwrap_or(0.0), g.heading.unwrap_or(0.0), g.timestamp
+                g.latitude,
+                g.longitude,
+                g.speed.unwrap_or(0.0),
+                g.heading.unwrap_or(0.0),
+                g.timestamp
             ),
             None => println!("  GPS  (none)"),
         }
         match &frame.accel {
             Some(a) => println!("  Accel  x={:+.3}  y={:+.3}  z={:+.3}", a.x, a.y, a.z),
-            None    => println!("  Accel  (none)"),
+            None => println!("  Accel  (none)"),
         }
         println!();
     }
@@ -299,10 +325,18 @@ fn cmd_render(args: RenderArgs) -> Result<()> {
     let frames = load_telemetry(&args.input)?;
 
     let output_mode = {
-        let ext = args.output.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+        let ext = args
+            .output
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("")
+            .to_lowercase();
         let is_video = matches!(ext.as_str(), "mp4" | "mov" | "mkv" | "webm");
         if is_video && args.save_frames {
-            OutputMode::Both { frames_dir: args.frames_dir.clone(), video: args.output.clone() }
+            OutputMode::Both {
+                frames_dir: args.frames_dir.clone(),
+                video: args.output.clone(),
+            }
         } else if is_video {
             OutputMode::FfmpegPipe(args.output.clone())
         } else {
@@ -346,34 +380,47 @@ fn cmd_compose(args: ComposeArgs) -> Result<()> {
 
 fn configure_threads(threads: usize) {
     let n = if threads == 0 {
-        std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4)
+        std::thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(4)
     } else {
         threads
     };
-    rayon::ThreadPoolBuilder::new().num_threads(n).build_global().ok();
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(n)
+        .build_global()
+        .ok();
     println!("dashcam-hud  ·  {} render threads", n);
 }
 
 fn load_telemetry(input: &PathBuf) -> Result<Vec<telemetry::vantrue_frames::TelemetryFrame>> {
     println!("Extracting telemetry from {}…", input.display());
-    let json   = extract_metadata(input).context("exiftool extraction failed").expect("exiftool extraction failed");
+    let json = extract_metadata(input)
+        .context("exiftool extraction failed")
+        .expect("exiftool extraction failed");
     let frames = parse_telemetry(&json);
-    println!("Found {} telemetry frames  (1 frame = 1 second of video)", frames.len());
+    println!(
+        "Found {} telemetry frames  (1 frame = 1 second of video)",
+        frames.len()
+    );
     if frames.len() < 2 {
-        anyhow::bail!("Not enough telemetry frames to render (found {}).", frames.len());
+        anyhow::bail!(
+            "Not enough telemetry frames to render (found {}).",
+            frames.len()
+        );
     }
     Ok(frames)
 }
 
 fn build_config(tuning: &RenderTuning, elements: HudElements, output: OutputMode) -> RenderConfig {
     RenderConfig {
-        width:           tuning.width,
-        height:          tuning.height,
-        fps:             tuning.fps,
-        max_speed:       tuning.max_speed,
+        width: tuning.width,
+        height: tuning.height,
+        fps: tuning.fps,
+        max_speed: tuning.max_speed,
         elements,
         output,
-        sync_offset_s:   tuning.sync_offset,
+        sync_offset_s: tuning.sync_offset,
     }
 }
 
@@ -381,22 +428,20 @@ fn print_header(input: &PathBuf, output: &PathBuf, e: HudElements) {
     println!();
     println!("  Input : {}", input.display());
     println!("  Output: {}", output.display());
-    println!("  HUD   : {}{}{}{}{}",
-             if e.speedometer { "speed " }  else { "" },
-             if e.gforce      { "gforce " } else { "" },
-             if e.compass     { "compass " }else { "" },
-             if e.gps_tag     { "gps " }    else { "" },
-             if e.minimap     { "map" }     else { "" },
+    println!(
+        "  HUD   : {}{}{}{}{}",
+        if e.speedometer { "speed " } else { "" },
+        if e.gforce { "gforce " } else { "" },
+        if e.compass { "compass " } else { "" },
+        if e.gps_tag { "gps " } else { "" },
+        if e.minimap { "map" } else { "" },
     );
 }
 
-fn print_render_summary(
-    frames: &[telemetry::vantrue_frames::TelemetryFrame],
-    cfg: &RenderConfig,
-) {
+fn print_render_summary(frames: &[telemetry::vantrue_frames::TelemetryFrame], cfg: &RenderConfig) {
     // 1 TelemetryFrame = 1 second of video → total output frames = (n-1) * fps
     let total = (frames.len() - 1) * cfg.fps as usize;
-    let dur   = (frames.len() - 1) as f64;
+    let dur = (frames.len() - 1) as f64;
     println!(
         "\nRendering {} frames  ({:.0}s of telemetry @ {}fps)…\n",
         total, dur, cfg.fps

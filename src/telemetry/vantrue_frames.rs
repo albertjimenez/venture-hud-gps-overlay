@@ -15,7 +15,7 @@ pub struct GpsFrame {
     /// Always 0.0 for Doc1. Useful for debugging sync issues via `inspect`.
     pub time_s: f64,
 
-    pub latitude:  f64,
+    pub latitude: f64,
     pub longitude: f64,
 
     /// Speed in km/h.
@@ -53,6 +53,6 @@ pub struct AccelerometerFrame {
 pub struct TelemetryFrame {
     /// ExifTool document group identifier, e.g. "Doc1", "Doc42".
     pub doc_id: String,
-    pub gps:    Option<GpsFrame>,
-    pub accel:  Option<AccelerometerFrame>,
+    pub gps: Option<GpsFrame>,
+    pub accel: Option<AccelerometerFrame>,
 }
