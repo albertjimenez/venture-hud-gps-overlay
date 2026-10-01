@@ -1,21 +1,23 @@
 [package]
 name = "dashcam-hud-rs"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 
 [dependencies]
-anyhow = "1.0.102"
+anyhow = "1.0.104"
 exiftool = "0.3.1"
-image = "0.25.9"
-serde_json = "1.0.149"
-imageproc = "0.26.1"
-indicatif = "0.18.4"
-rayon = "1.11.0"
-clap = { version = "4.5.60", features = ["derive"] }
+image = "0.25.10"
+serde_json = "1.0.151"
+imageproc = "0.27.0"
+indicatif = "0.18.6"
+rayon = "1.12.0"
+clap = { version = "4.6.7", features = ["derive"] }
 quick-error = "2.0.1"
-serde = { version = "1.0.228", features = ["derive"] }
+serde = { version = "1.0.229", features = ["derive"] }
 
 [profile.release]
 opt-level = 3
 lto = true
 codegen-units = 1
+panic = "abort"
+strip = true
