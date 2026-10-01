@@ -3,7 +3,6 @@ name: cd
 # Continuous delivery. Runs only on `v*` tags:
 #   1. re-runs the test gate (a tag must never ship red code),
 #   2. builds + publishes release binaries to the GitHub release,
-#   3. builds + pushes multi-arch images to Docker Hub (beruto/netmon).
 #
 # Binary targets:
 #   x86_64-unknown-linux-musl  fully static 64-bit Linux
@@ -97,19 +96,19 @@ jobs:
       - name: Package
         shell: bash
         run: |
-          STAGE=dist/netmon
+          STAGE=dist/dashcam-hud-rs
           mkdir -p "$STAGE"
           cp "target/${{ matrix.target }}/release/dashcam-hud-rs${{ matrix.exe }}" "$STAGE/"
           cp config.json README.md "$STAGE/"
           if [ "${{ matrix.archive }}" = "zip" ]; then
-            (cd dist && zip -r "../netmon-${{ matrix.target }}.zip" netmon)
+            (cd dist && zip -r "../dashcam-hud-rs-${{ matrix.target }}.zip" dashcam-hud-rs)
           else
-            tar -czf "netmon-${{ matrix.target }}.tar.gz" -C dist netmon
+            tar -czf "dashcam-hud-rs-${{ matrix.target }}.tar.gz" -C dist dashcam-hud-rs
           fi
       - uses: actions/upload-artifact@v4
         with:
-          name: netmon-${{ matrix.target }}
-          path: netmon-${{ matrix.target }}.*
+          name: dashcam-hud-rs-${{ matrix.target }}
+          path: dashcam-hud-rs-${{ matrix.target }}.*
 
   publish-release:
     needs: release-binaries
@@ -123,28 +122,7 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           files: |
-            netmon-*.tar.gz
-            netmon-*.zip
+            dashcam-hud-rs-*.tar.gz
+            dashcam-hud-rs-*.zip
           generate_release_notes: true
 
-  docker:
-    needs: test
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
-        with:
-          username: beruto
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - uses: docker/build-push-action@v5
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            beruto/netmon:${{ github.ref_name }}
-            beruto/netmon:latest
